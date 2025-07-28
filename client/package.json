@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "frontend/package.json",
+      "src": "client/package.json",
       "use": "@vercel/static-build"
     },
     {
@@ -10,7 +10,6 @@
       "use": "@vercel/node"
     }
   ],
-  "buildCommand": "cd frontend && npm install && npm run build",
   "routes": [
     {
       "src": "/api/(.*)",
@@ -21,7 +20,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/index.html"
+      "dest": "/client/index.html"
     }
   ]
 }
