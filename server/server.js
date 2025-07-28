@@ -27,7 +27,7 @@ if (process.env.NODE_ENV !== 'production') {
     import path from 'node:path';
 
     const __dirname = dirname(fileURLToPath(import.meta.url));
-    const buildPath = path.join(__dirname, '../frontend/dist');
+    const buildPath = path.join(__dirname, '../client/dist');
 
     // Serve React build locally if not in production
     app.use(express.static(buildPath));
