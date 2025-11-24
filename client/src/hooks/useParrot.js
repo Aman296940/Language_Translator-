@@ -26,29 +26,97 @@ export default function useParrot() {
   const [status, setStatus] = useState('');
   const [result, setResult] = useState('');
   const [micError, setMicError] = useState(null);
+  const [localTranscript, setLocalTranscript] = useState('');
+  const [localListening, setLocalListening] = useState(false);
+  const [recognition, setRecognition] = useState(null);
 
   const {
-    transcript,
-    listening,
+    transcript: libTranscript,
+    listening: libListening,
     resetTranscript,
     browserSupportsSpeechRecognition,
+    isMicrophoneAvailable,
   } = useSpeechRecognition();
+
+  // Use library transcript if available, otherwise use local
+  const transcript = libTranscript || localTranscript;
+  const listening = libListening || localListening;
 
   // Check browser support
   const supported = checkBrowserSupport() || browserSupportsSpeechRecognition;
 
   // Debug logging and error handling
   useEffect(() => {
-    console.log('Speech Recognition Support:', {
+    console.log('Speech Recognition State:', {
       supported,
       browserSupportsSpeechRecognition,
+      isMicrophoneAvailable,
       hasWebkit: !!window.webkitSpeechRecognition,
       hasSpeechRecognition: !!window.SpeechRecognition,
       listening,
-      transcript
+      transcript,
+      transcriptLength: transcript?.length || 0
     });
+    
+    // Log when transcript changes
+    if (transcript) {
+      console.log('Transcript updated:', transcript);
+    }
+  }, [supported, browserSupportsSpeechRecognition, isMicrophoneAvailable, listening, transcript]);
 
-    // Request microphone permission on component mount
+  // Initialize native Speech Recognition as fallback
+  useEffect(() => {
+    if (supported && !recognition) {
+      const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognitionAPI) {
+        const rec = new SpeechRecognitionAPI();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.lang = 'en-US';
+
+        rec.onresult = (event) => {
+          let interimTranscript = '';
+          let finalTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + ' ';
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+
+          const fullTranscript = finalTranscript || interimTranscript;
+          if (fullTranscript) {
+            console.log('Native recognition transcript:', fullTranscript);
+            setLocalTranscript(fullTranscript.trim());
+          }
+        };
+
+        rec.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+          setMicError(`Speech recognition error: ${event.error}`);
+          setLocalListening(false);
+        };
+
+        rec.onend = () => {
+          console.log('Speech recognition ended');
+          setLocalListening(false);
+        };
+
+        rec.onstart = () => {
+          console.log('Speech recognition started');
+          setLocalListening(true);
+        };
+
+        setRecognition(rec);
+      }
+    }
+  }, [supported, recognition]);
+
+  // Request microphone permission on component mount
+  useEffect(() => {
     if (supported && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       navigator.mediaDevices.getUserMedia({ audio: true })
         .then(() => {
@@ -59,7 +127,7 @@ export default function useParrot() {
           setMicError('Microphone access is required for speech recognition. Please allow microphone access and refresh the page.');
         });
     }
-  }, [supported, browserSupportsSpeechRecognition, listening, transcript]);
+  }, [supported]);
 
 
   const translateAsync = useCallback(
@@ -115,36 +183,68 @@ export default function useParrot() {
       const language = lang === 'auto' ? 'en-US' : lang;
       console.log('Starting speech recognition with language:', language);
       
-      SpeechRecognition.startListening({
-        continuous: true,
-        language: language,
-        interimResults: true
-      });
+      // Reset transcript before starting
+      resetTranscript();
+      setLocalTranscript('');
+      
+      // Try library first
+      try {
+        SpeechRecognition.startListening({
+          continuous: true,
+          language: language,
+          interimResults: true
+        });
+        console.log('Library speech recognition started');
+      } catch (libError) {
+        console.warn('Library speech recognition failed, using native:', libError);
+      }
+      
+      // Also try native as fallback
+      if (recognition) {
+        recognition.lang = language;
+        recognition.start();
+        console.log('Native speech recognition started');
+      }
       
       setStatus('Listening…');
+      console.log('Speech recognition started, waiting for audio...');
     } catch (error) {
       console.error('Error starting speech recognition:', error);
       setMicError(error.message || 'Failed to start microphone');
       setStatus('Error');
     }
-  }, [supported]);
+  }, [supported, resetTranscript, recognition]);
 
   const stopListening = useCallback(() => {
     try {
       console.log('Stopping speech recognition');
       SpeechRecognition.stopListening();
+      if (recognition) {
+        recognition.stop();
+      }
+      setLocalListening(false);
       setStatus('Stopped');
     } catch (error) {
       console.error('Error stopping speech recognition:', error);
       setStatus('Error');
     }
-  }, []);
+  }, [recognition]);
+
+  // Enhanced clear function that clears both transcript and result
+  const clearAll = useCallback(() => {
+    console.log('Clearing transcript and result');
+    resetTranscript();
+    setLocalTranscript('');
+    setResult('');
+    setStatus('');
+    setMicError(null);
+  }, [resetTranscript]);
 
   return {
     listening,
     transcript,
     finalTranscript: transcript, // Alias for compatibility
-    resetTranscript,
+    resetTranscript: clearAll, // Use enhanced clear function
     supported,
     translateAsync,
     result,
