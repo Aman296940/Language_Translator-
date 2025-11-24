@@ -39,8 +39,9 @@ export default function useParrot() {
   } = useSpeechRecognition();
 
   // Use library transcript if available, otherwise use local
-  const transcript = libTranscript || localTranscript;
-  const listening = libListening || localListening;
+  // Prefer local transcript if it has content (native API is more reliable)
+  const transcript = localTranscript || libTranscript;
+  const listening = localListening || libListening;
 
   // Check browser support
   const supported = checkBrowserSupport() || browserSupportsSpeechRecognition;
@@ -74,46 +75,69 @@ export default function useParrot() {
         rec.interimResults = true;
         rec.lang = 'en-US';
 
+        let accumulatedTranscript = '';
+
         rec.onresult = (event) => {
+          console.log('Native recognition onresult event:', event);
+          
           let interimTranscript = '';
           let finalTranscript = '';
 
+          // Process all results from the last resultIndex
           for (let i = event.resultIndex; i < event.results.length; i++) {
             const transcript = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
               finalTranscript += transcript + ' ';
+              accumulatedTranscript += transcript + ' ';
             } else {
               interimTranscript += transcript;
             }
           }
 
-          const fullTranscript = finalTranscript || interimTranscript;
-          if (fullTranscript) {
-            console.log('Native recognition transcript:', fullTranscript);
+          // Combine accumulated final transcript with current interim
+          const fullTranscript = accumulatedTranscript + interimTranscript;
+          
+          if (fullTranscript.trim()) {
+            console.log('Setting transcript:', fullTranscript.trim());
             setLocalTranscript(fullTranscript.trim());
           }
         };
 
         rec.onerror = (event) => {
-          console.error('Speech recognition error:', event.error);
-          setMicError(`Speech recognition error: ${event.error}`);
-          setLocalListening(false);
+          console.error('Speech recognition error:', event.error, event);
+          if (event.error !== 'no-speech') {
+            setMicError(`Speech recognition error: ${event.error}`);
+          }
+          // Don't stop on 'no-speech' errors, just log them
+          if (event.error === 'aborted' || event.error === 'not-allowed') {
+            setLocalListening(false);
+          }
         };
 
         rec.onend = () => {
           console.log('Speech recognition ended');
-          setLocalListening(false);
+          // If still supposed to be listening, restart
+          if (localListening) {
+            console.log('Restarting recognition...');
+            try {
+              rec.start();
+            } catch (e) {
+              console.warn('Could not restart recognition:', e);
+              setLocalListening(false);
+            }
+          }
         };
 
         rec.onstart = () => {
-          console.log('Speech recognition started');
+          console.log('Native speech recognition started');
           setLocalListening(true);
+          accumulatedTranscript = ''; // Reset on start
         };
 
         setRecognition(rec);
       }
     }
-  }, [supported, recognition]);
+  }, [supported, recognition, localListening]);
 
   // Request microphone permission on component mount
   useEffect(() => {
@@ -187,7 +211,23 @@ export default function useParrot() {
       resetTranscript();
       setLocalTranscript('');
       
-      // Try library first
+      // Try native first (more reliable)
+      if (recognition) {
+        try {
+          recognition.lang = language;
+          if (recognition.state === 'running') {
+            recognition.stop();
+            setTimeout(() => recognition.start(), 100);
+          } else {
+            recognition.start();
+          }
+          console.log('Native speech recognition started');
+        } catch (nativeError) {
+          console.error('Native recognition start error:', nativeError);
+        }
+      }
+      
+      // Also try library
       try {
         SpeechRecognition.startListening({
           continuous: true,
@@ -196,14 +236,7 @@ export default function useParrot() {
         });
         console.log('Library speech recognition started');
       } catch (libError) {
-        console.warn('Library speech recognition failed, using native:', libError);
-      }
-      
-      // Also try native as fallback
-      if (recognition) {
-        recognition.lang = language;
-        recognition.start();
-        console.log('Native speech recognition started');
+        console.warn('Library speech recognition failed:', libError);
       }
       
       setStatus('Listening…');
