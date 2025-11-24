@@ -65,7 +65,7 @@ export default function useParrot() {
     }
   }, [supported, browserSupportsSpeechRecognition, isMicrophoneAvailable, listening, transcript]);
 
-  // Initialize native Speech Recognition as fallback
+  // Initialize native Speech Recognition - only once
   useEffect(() => {
     if (supported && !recognition) {
       const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -75,8 +75,11 @@ export default function useParrot() {
         rec.continuous = true;
         rec.interimResults = true;
         rec.lang = 'en-US';
+        rec.maxAlternatives = 1; // Only get the best result
 
         let accumulatedTranscript = '';
+        let isActive = false;
+        let shouldRestart = false;
 
         rec.onresult = (event) => {
           console.log('=== NATIVE RECOGNITION RESULT EVENT ===');
@@ -138,27 +141,43 @@ export default function useParrot() {
         rec.onend = () => {
           console.log('=== SPEECH RECOGNITION ENDED ===');
           console.log('localListening state:', localListening);
+          console.log('isActive flag:', isActive);
+          console.log('Recognition state:', rec.state);
+          isActive = false;
           
           // If still supposed to be listening, restart
-          if (localListening) {
+          if (localListening || shouldRestart) {
             console.log('🔄 Restarting recognition...');
+            shouldRestart = true;
             setTimeout(() => {
               try {
-                rec.start();
-                console.log('✅ Recognition restarted');
+                const state = rec.state || 'unknown';
+                if (state !== 'running' && state !== 'listening') {
+                  rec.start();
+                  console.log('✅ Recognition restarted');
+                  shouldRestart = false;
+                } else {
+                  console.log('⚠️ Recognition already running, skipping restart');
+                  shouldRestart = false;
+                }
               } catch (e) {
                 console.warn('❌ Could not restart recognition:', e);
                 setLocalListening(false);
+                shouldRestart = false;
               }
             }, 100);
+          } else {
+            console.log('Not restarting - localListening is false');
           }
         };
 
         rec.onstart = () => {
           console.log('=== NATIVE SPEECH RECOGNITION STARTED ===');
+          isActive = true;
           setLocalListening(true);
           accumulatedTranscript = ''; // Reset on start
           setLocalTranscript(''); // Clear previous transcript
+          console.log('Recognition is now active and listening...');
         };
 
         rec.onaudiostart = () => {
@@ -191,7 +210,9 @@ export default function useParrot() {
         console.error('❌ SpeechRecognition API not available');
       }
     }
-  }, [supported, recognition, localListening]);
+    // Only run once when supported changes, not when recognition or localListening changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supported]);
 
   // Request microphone permission on component mount
   useEffect(() => {
@@ -271,29 +292,49 @@ export default function useParrot() {
       if (recognition) {
         try {
           recognition.lang = language;
-          console.log('Recognition state before start:', recognition.state || 'unknown');
+          const currentState = recognition.state || 'unknown';
+          console.log('Recognition state before start:', currentState);
           
           // Stop if already running
-          if (recognition.state === 'running' || recognition.state === 'listening') {
+          if (currentState === 'running' || currentState === 'listening') {
             console.log('Stopping existing recognition...');
             recognition.stop();
-            // Wait a bit before restarting
+            // Wait longer before restarting to ensure clean state
             setTimeout(() => {
               console.log('Starting recognition after stop...');
-              recognition.start();
-              console.log('✅ Native recognition started');
-            }, 200);
+              try {
+                recognition.start();
+                console.log('✅ Native recognition restarted');
+              } catch (e) {
+                console.error('❌ Error restarting:', e);
+                setMicError(`Failed to restart: ${e.message}`);
+              }
+            }, 300);
           } else {
-            console.log('Starting recognition...');
-            recognition.start();
-            console.log('✅ Native recognition started');
+            console.log('Starting fresh recognition...');
+            try {
+              recognition.start();
+              console.log('✅ Native recognition started successfully');
+            } catch (startError) {
+              console.error('❌ Error starting recognition:', startError);
+              setMicError(`Failed to start: ${startError.message}`);
+              return;
+            }
           }
         } catch (nativeError) {
-          console.error('❌ Native recognition start error:', nativeError);
+          console.error('❌ Native recognition error:', nativeError);
           setMicError(`Failed to start: ${nativeError.message}`);
         }
       } else {
-        console.warn('⚠️ Recognition object not available yet');
+        console.warn('⚠️ Recognition object not available yet, waiting...');
+        // Try to wait a bit and retry
+        setTimeout(() => {
+          if (recognition) {
+            console.log('Recognition now available, starting...');
+            recognition.lang = language;
+            recognition.start();
+          }
+        }, 500);
       }
       
       // Also try library
