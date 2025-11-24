@@ -1,0 +1,14 @@
+# Ignore server directory (we're using api/ instead)
+server/
+
+# Ignore development files
+*.md
+!README.md
+.eslintrc*
+.prettierrc*
+
+# Ignore test files if any
+**/__tests__/
+**/*.test.js
+**/*.spec.js
+

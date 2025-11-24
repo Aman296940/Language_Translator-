@@ -2,10 +2,21 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import translateRouter from './routes/translate.js';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 dotenv.config();
 const app = express();
 app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
 app.use('/api/translate', translateRouter);
 
 // --- IMPORTANT MODIFICATION STARTS HERE ---
@@ -22,12 +33,10 @@ if (process.env.NODE_ENV !== 'production') {
     // These imports and static serving are only relevant if you're serving
     // the frontend from the *same* Express server locally.
     // In a Vercel monorepo setup, Vercel serves the frontend separately.
-    import { dirname } from 'node:path';
-    import { fileURLToPath } from 'node:url';
-    import path from 'node:path';
+
 
     const __dirname = dirname(fileURLToPath(import.meta.url));
-    const buildPath = path.join(__dirname, '../frontend/dist');
+    const buildPath = path.join(__dirname, '../client/dist');
 
     // Serve React build locally if not in production
     app.use(express.static(buildPath));

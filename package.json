@@ -1,13 +1,15 @@
 {
   "name": "parrot-translator",
   "private": true,
-  "workspaces": ["backend", "frontend"],
+  "type": "module",
   "scripts": {
     "dev": "concurrently -k -n BACKEND,FRONTEND -c green,cyan \"npm:start-backend\" \"npm:start-frontend\"",
-    "start-backend": "npm --workspace backend run dev",
-    "start-frontend": "npm --workspace frontend run dev",
-    "build": "npm --workspace frontend run build",
-    "serve": "NODE_ENV=production npm --workspace backend start"
+    "start-backend": "cd server && npm run dev",
+    "start-frontend": "cd client && npm run dev",
+    "build": "cd client && npm run build"
+  },
+  "dependencies": {
+    "google-translate-api-x": "^10.7.2"
   },
   "devDependencies": {
     "concurrently": "^8.3.0"
