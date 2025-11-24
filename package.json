@@ -12,6 +12,6 @@
     "google-translate-api-x": "^10.7.2"
   },
   "devDependencies": {
-    "concurrently": "^7.6.2"
+    "concurrently": "^8.2.2"
   }
 }
