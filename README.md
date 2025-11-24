@@ -4,7 +4,7 @@ A modern language translation application with speech recognition capabilities. 
 
 ## 🚀 Live Demo
 
-Deployed on Vercel: [Your Vercel URL]
+Deployed on Vercel: [language-translator-navy-rho.vercel.app](https://language-translator-navy-rho.vercel.app)
 
 ## ✨ Features
 
@@ -17,26 +17,30 @@ Deployed on Vercel: [Your Vercel URL]
 ## 🛠️ Tech Stack
 
 ### Frontend
-- **React** 18.3.0
-- **Vite** - Build tool
-- **Tailwind CSS** - Styling
-- **React Speech Recognition** - Voice input
+- **React** 18.3.0 - UI library
+- **Vite** - Build tool and dev server
+- **Tailwind CSS** - Utility-first CSS framework
+- **React Icons** - Icon library
+- **React Speech Recognition** - Speech-to-text functionality
 
 ### Backend
-- **Vercel Serverless Functions** - API endpoints
+- **Vercel Serverless Functions** - API endpoints (production)
+- **Node.js** - Runtime environment (local development)
+- **Express.js** - Web framework (local development)
 - **Google Translate API X** - Translation service
 
-## 📋 Local Development
+## 📋 Prerequisites
 
-### Prerequisites
-- Node.js (version 16.0 or higher)
-- npm or yarn
+Before running this application, make sure you have:
 
-### Installation
+- **Node.js** (version 16.0 or higher)
+- **npm** or **yarn** package manager
+
+## 🚀 Installation
 
 1. **Clone the repository**
    ```bash
-   git clone <your-repository-url>
+   git clone https://github.com/Aman296940/Language_Translator-.git
    cd Language_translator
    ```
 
@@ -99,22 +103,105 @@ Language_translator/
 └── package.json         # Root dependencies
 ```
 
-### API Endpoints
+## 🔌 API Endpoints
+
+### Translation Endpoint
 
 - **GET** `/api/translate?q=text&to=lang&from=lang` - Translate text
-- **GET** `/api/health` - Health check
+  - **Query Parameters**:
+    - `q` (required): Text to translate
+    - `to` (required): Target language code (e.g., 'es', 'fr', 'de')
+    - `from` (optional): Source language code (default: auto-detect)
+  - **Response**:
+    ```json
+    {
+      "result": "Translated text",
+      "detected": "en"
+    }
+    ```
+
+### Health Check
+
+- **GET** `/api/health`
+  - **Response**:
+    ```json
+    {
+      "status": "OK",
+      "timestamp": "2024-01-01T00:00:00.000Z"
+    }
+    ```
 
 ## 📝 Notes
 
 - The `server/` directory is only used for local development
 - Production uses Vercel serverless functions in the `api/` directory
-- No API keys or environment variables required
+- No API keys or environment variables required for deployment
 - Works on Vercel's free tier
+
+## 🎯 Usage
+
+1. Open the application in your browser
+2. Select source and target languages from the dropdowns
+3. Enter text manually or use the microphone button for voice input
+4. View the translated text in real-time
+5. Copy or share the translation as needed
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+We welcome contributions! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+### Development Guidelines
+
+- Follow ESLint configuration for code formatting
+- Write descriptive commit messages
+- Add comments for complex logic
+- Test your changes thoroughly
+- Update documentation as needed
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Backend not starting:**
+- Check if the port is already in use
+- Verify environment variables are set correctly
+- Ensure all dependencies are installed
+
+**Translation not working:**
+- Check internet connection
+- Review API quotas and billing settings (if using official Google Translate API)
+- For Vercel deployment, ensure the `api/` directory functions are properly deployed
+
+**Speech recognition not working:**
+- Ensure microphone permissions are granted
+- Use HTTPS in production (required for speech recognition)
+- Check browser compatibility (Chrome/Edge recommended)
 
 ## 📄 License
 
-This project is open source and available under the MIT License.
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- Google Translate API X for translation services
+- React Speech Recognition library for voice input
+- Tailwind CSS for styling utilities
+- The open-source community for various packages and tools
+
+## 📞 Support
+
+If you encounter any issues or have questions, please:
+
+1. Check the troubleshooting section above
+2. Search existing issues on GitHub
+3. Create a new issue with detailed information
+
+---
+
+**Made with ❤️ and 🦜**
