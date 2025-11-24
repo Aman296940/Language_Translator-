@@ -46,31 +46,12 @@ export default function useParrot() {
   // Check browser support
   const supported = checkBrowserSupport() || browserSupportsSpeechRecognition;
 
-  // Debug logging and error handling
-  useEffect(() => {
-    console.log('Speech Recognition State:', {
-      supported,
-      browserSupportsSpeechRecognition,
-      isMicrophoneAvailable,
-      hasWebkit: !!window.webkitSpeechRecognition,
-      hasSpeechRecognition: !!window.SpeechRecognition,
-      listening,
-      transcript,
-      transcriptLength: transcript?.length || 0
-    });
-    
-    // Log when transcript changes
-    if (transcript) {
-      console.log('Transcript updated:', transcript);
-    }
-  }, [supported, browserSupportsSpeechRecognition, isMicrophoneAvailable, listening, transcript]);
 
   // Initialize native Speech Recognition - only once
   useEffect(() => {
     if (supported && !recognition) {
       const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognitionAPI) {
-        console.log('Creating new SpeechRecognition instance');
         const rec = new SpeechRecognitionAPI();
         rec.continuous = true;
         rec.interimResults = true;
@@ -82,21 +63,13 @@ export default function useParrot() {
         let shouldRestart = false;
 
         rec.onresult = (event) => {
-          console.log('=== NATIVE RECOGNITION RESULT EVENT ===');
-          console.log('Event:', event);
-          console.log('Results length:', event.results.length);
-          console.log('Result index:', event.resultIndex);
-          
           let interimTranscript = '';
           let finalTranscript = '';
 
-          // Process all results from the last resultIndex
           for (let i = event.resultIndex; i < event.results.length; i++) {
             const result = event.results[i];
             const transcript = result[0].transcript;
             const isFinal = result.isFinal;
-            
-            console.log(`Result ${i}: "${transcript}" (isFinal: ${isFinal})`);
             
             if (isFinal) {
               finalTranscript += transcript + ' ';
@@ -106,135 +79,72 @@ export default function useParrot() {
             }
           }
 
-          // Combine accumulated final transcript with current interim
           const fullTranscript = accumulatedTranscript + interimTranscript;
           
-          console.log('Final transcript:', accumulatedTranscript);
-          console.log('Interim transcript:', interimTranscript);
-          console.log('Full transcript:', fullTranscript);
-          
           if (fullTranscript.trim()) {
-            console.log('✅ Setting transcript:', fullTranscript.trim());
             setLocalTranscript(fullTranscript.trim());
-          } else {
-            console.warn('⚠️ Empty transcript, not setting');
           }
         };
 
         rec.onerror = (event) => {
-          console.error('=== SPEECH RECOGNITION ERROR ===');
-          console.error('Error:', event.error);
-          console.error('Event:', event);
-          
           if (event.error === 'no-speech') {
-            console.log('No speech detected (this is normal when not speaking)');
-          } else if (event.error !== 'no-speech') {
+            // Normal when not speaking, ignore
+            return;
+          }
+          
+          if (event.error !== 'no-speech') {
             setMicError(`Speech recognition error: ${event.error}`);
           }
           
-          // Don't stop on 'no-speech' errors, just log them
           if (event.error === 'aborted' || event.error === 'not-allowed' || event.error === 'network') {
             setLocalListening(false);
           }
         };
 
         rec.onend = () => {
-          console.log('=== SPEECH RECOGNITION ENDED ===');
-          console.log('localListening state:', localListening);
-          console.log('isActive flag:', isActive);
-          console.log('Recognition state:', rec.state);
           isActive = false;
           
-          // Use a closure to check the current state
           setTimeout(() => {
-            // Check if we should still be listening by checking the state
-            // We'll use a ref or check the recognition object directly
             if (shouldRestart) {
-              console.log('🔄 Restarting recognition (shouldRestart flag)...');
               try {
                 rec.start();
-                console.log('✅ Recognition restarted');
                 shouldRestart = false;
               } catch (e) {
-                console.warn('❌ Could not restart recognition:', e);
                 setLocalListening(false);
                 shouldRestart = false;
               }
             } else if (localListening) {
-              // Only restart if we're still supposed to be listening
-              console.log('🔄 Restarting recognition (localListening is true)...');
               shouldRestart = true;
               setTimeout(() => {
                 try {
                   rec.start();
-                  console.log('✅ Recognition restarted');
                   shouldRestart = false;
                 } catch (e) {
-                  console.warn('❌ Could not restart recognition:', e);
                   setLocalListening(false);
                   shouldRestart = false;
                 }
               }, 100);
-            } else {
-              console.log('Not restarting - localListening is false and shouldRestart is false');
             }
           }, 50);
         };
 
         rec.onstart = () => {
-          console.log('=== NATIVE SPEECH RECOGNITION STARTED ===');
-          console.log('onstart event fired!');
           isActive = true;
           setLocalListening(true);
-          accumulatedTranscript = ''; // Reset on start
-          setLocalTranscript(''); // Clear previous transcript
+          accumulatedTranscript = '';
+          setLocalTranscript('');
           setStatus('Listening…');
-          console.log('✅ Recognition is now active and listening...');
-        };
-
-        rec.onaudiostart = () => {
-          console.log('🎤 Audio capture started');
-        };
-
-        rec.onaudioend = () => {
-          console.log('🎤 Audio capture ended');
-        };
-
-        rec.onsoundstart = () => {
-          console.log('🔊 Sound detected');
-        };
-
-        rec.onsoundend = () => {
-          console.log('🔇 Sound ended');
-        };
-
-        rec.onspeechstart = () => {
-          console.log('🗣️ Speech detected');
-        };
-
-        rec.onspeechend = () => {
-          console.log('🗣️ Speech ended');
         };
 
         setRecognition(rec);
-        console.log('✅ Recognition object created and stored');
-      } else {
-        console.error('❌ SpeechRecognition API not available');
       }
     }
-    // Only run once when supported changes, not when recognition or localListening changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supported]);
 
-  // Request microphone permission on component mount
   useEffect(() => {
     if (supported && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(() => {
-          console.log('Microphone permission granted');
-        })
         .catch((err) => {
-          console.warn('Microphone permission denied or error:', err);
           setMicError('Microphone access is required for speech recognition. Please allow microphone access and refresh the page.');
         });
     }
@@ -247,10 +157,7 @@ export default function useParrot() {
       setStatus('Translating…');
       try {
         const url = `/api/translate?q=${encodeURIComponent(text)}&to=${to}&from=${from}`;
-        console.log('Fetching translation from:', url);
-        
         const response = await fetch(url);
-        console.log('Response status:', response.status, response.statusText);
         
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}: ${response.statusText}` }));
@@ -258,11 +165,9 @@ export default function useParrot() {
         }
         
         const res = await response.json();
-        console.log('Translation response:', res);
         
         if (res.result) {
           setResult(res.result);
-          // speak it
           const utter = new SpeechSynthesisUtterance(res.result);
           utter.lang = to;
           window.speechSynthesis.speak(utter);
@@ -271,7 +176,6 @@ export default function useParrot() {
           throw new Error(res.error || res.details || 'No result from API');
         }
       } catch (err) {
-        console.error('Translation error:', err);
         const errorMessage = err.message || 'Translation failed';
         setResult(`Error: ${errorMessage}`);
         setStatus('Error');
@@ -289,75 +193,54 @@ export default function useParrot() {
 
     setMicError(null);
     setStatus('Requesting microphone access...');
-    
-    // Set listening state immediately
     setLocalListening(true);
     
     try {
       const language = lang === 'auto' ? 'en-US' : lang;
-      console.log('=== STARTING SPEECH RECOGNITION ===');
-      console.log('Language:', language);
-      console.log('Recognition object exists:', !!recognition);
       
-      // Reset transcript before starting
       resetTranscript();
       setLocalTranscript('');
       
-      // Try native first (more reliable)
       if (recognition) {
         try {
           recognition.lang = language;
-          console.log('Setting up recognition with language:', language);
           
-          // Always stop first to ensure clean state
           try {
             recognition.stop();
-            console.log('Stopped any existing recognition');
           } catch (stopError) {
-            console.log('No existing recognition to stop:', stopError.message);
+            // Ignore if not running
           }
           
-          // Wait a moment then start
           setTimeout(() => {
             try {
-              console.log('Starting recognition now...');
               recognition.start();
-              console.log('✅ recognition.start() called successfully');
               setStatus('Listening…');
             } catch (startError) {
-              console.error('❌ Error in recognition.start():', startError);
               setMicError(`Failed to start: ${startError.message}`);
               setLocalListening(false);
             }
           }, 100);
         } catch (nativeError) {
-          console.error('❌ Native recognition setup error:', nativeError);
           setMicError(`Failed to setup: ${nativeError.message}`);
           setLocalListening(false);
         }
       } else {
-        console.error('❌ Recognition object is null!');
         setMicError('Speech recognition not initialized. Please refresh the page.');
         setLocalListening(false);
         setStatus('Error');
         return;
       }
       
-      // Also try library
       try {
         SpeechRecognition.startListening({
           continuous: true,
           language: language,
           interimResults: true
         });
-        console.log('✅ Library speech recognition started');
       } catch (libError) {
-        console.warn('⚠️ Library speech recognition failed:', libError);
+        // Library is fallback, continue without it
       }
-      
-      console.log('🎤 Speech recognition setup complete, waiting for onstart event...');
     } catch (error) {
-      console.error('❌ Error starting speech recognition:', error);
       setMicError(error.message || 'Failed to start microphone');
       setStatus('Error');
       setLocalListening(false);
@@ -366,7 +249,6 @@ export default function useParrot() {
 
   const stopListening = useCallback(() => {
     try {
-      console.log('Stopping speech recognition');
       SpeechRecognition.stopListening();
       if (recognition) {
         recognition.stop();
@@ -374,14 +256,11 @@ export default function useParrot() {
       setLocalListening(false);
       setStatus('Stopped');
     } catch (error) {
-      console.error('Error stopping speech recognition:', error);
       setStatus('Error');
     }
   }, [recognition]);
 
-  // Enhanced clear function that clears both transcript and result
   const clearAll = useCallback(() => {
-    console.log('Clearing transcript and result');
     resetTranscript();
     setLocalTranscript('');
     setResult('');

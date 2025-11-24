@@ -6,7 +6,6 @@ import useParrot from './hooks/useParrot.js';
 import logo from './assets/react.svg';
 
 export default function App() {
-  // Destructure all needed state and actions from your custom hook
   const {
     listening,
     transcript,
@@ -21,15 +20,9 @@ export default function App() {
     stopListening,
   } = useParrot();
 
-  // Local state for languages (defaulting to auto and English)
   const [fromLang, setFromLang] = useState('auto');
   const [toLang, setToLang] = useState('en');
 
-  // *** DEBUGGING LINE: CHECK WHAT App.jsx RECEIVES ***
-  console.log('App.jsx - `supported` value received from useParrot:', supported);
-
-  // If browser support is missing, inform the user
-  // This condition should now evaluate to false because we force `supported` to true in useParrot.js
   if (!supported) {
     return (
       <div className="w-full max-w-3xl px-6 pb-20">
@@ -42,7 +35,6 @@ export default function App() {
     );
   }
 
-  // Toggle microphone on/off
   const onToggle = () => {
     if (listening) {
       stopListening();
@@ -51,20 +43,15 @@ export default function App() {
     }
   };
 
-  // Manual translation trigger (translates whatever's currently in transcript)
   const onManualTranslate = () => {
     translateAsync(transcript, fromLang, toLang);
   };
 
-  // The rest of the App component (main UI)
   return (
     <div className="w-full max-w-3xl px-6 pb-20 mx-auto">
       <header className="flex flex-col items-center gap-4 mb-8">
-        {/* <img src={logo} alt="Parrot logo" className="w-32" /> */}
         <h1 className="text-3xl font-bold text-gray-100">Language Translator</h1>
       </header>
-
-      {/* Removed the duplicate !supported message block here */}
 
       <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
         <LanguageSelect label="From" value={fromLang} onChange={setFromLang} />
