@@ -42,9 +42,20 @@ export default function useParrot() {
       if (!text) return;
       setStatus('Translating…');
       try {
-        const res = await fetch(
-          `/api/translate?q=${encodeURIComponent(text)}&to=${to}&from=${from}`
-        ).then((r) => r.json());
+        const url = `/api/translate?q=${encodeURIComponent(text)}&to=${to}&from=${from}`;
+        console.log('Fetching translation from:', url);
+        
+        const response = await fetch(url);
+        console.log('Response status:', response.status, response.statusText);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}: ${response.statusText}` }));
+          throw new Error(errorData.error || errorData.details || `HTTP ${response.status}`);
+        }
+        
+        const res = await response.json();
+        console.log('Translation response:', res);
+        
         if (res.result) {
           setResult(res.result);
           // speak it
@@ -52,9 +63,13 @@ export default function useParrot() {
           utter.lang = to;
           window.speechSynthesis.speak(utter);
           setStatus('Done');
-        } else throw new Error(res.error || 'No result');
+        } else {
+          throw new Error(res.error || res.details || 'No result from API');
+        }
       } catch (err) {
-        console.error(err);
+        console.error('Translation error:', err);
+        const errorMessage = err.message || 'Translation failed';
+        setResult(`Error: ${errorMessage}`);
         setStatus('Error');
       }
     },
@@ -80,6 +95,7 @@ export default function useParrot() {
   return {
     listening,
     transcript,
+    finalTranscript: transcript, // Alias for compatibility
     resetTranscript,
     supported, // <--- Return our explicitly set 'true' value
     translateAsync,

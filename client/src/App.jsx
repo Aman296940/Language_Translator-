@@ -78,9 +78,30 @@ export default function App() {
           className="w-full h-32 p-3 rounded text-black"
           value={transcript}
           readOnly
-          placeholder="Your speech will appear here..."
+          placeholder="Your speech will appear here... Or type text below to translate manually."
           aria-label="Transcript text area"
         />
+
+        <div className="w-full">
+          <label className="block text-sm text-gray-300 mb-2">Or type text to translate:</label>
+          <textarea
+            id="manual-input"
+            className="w-full h-24 p-3 rounded text-black"
+            placeholder="Type text here to translate..."
+            aria-label="Manual text input"
+          />
+          <button
+            onClick={() => {
+              const input = document.getElementById('manual-input');
+              if (input && input.value.trim()) {
+                translateAsync(input.value.trim(), fromLang, toLang);
+              }
+            }}
+            className="mt-2 bg-blue-500 hover:bg-blue-600 font-semibold px-6 py-2 rounded transition"
+          >
+            Translate Text
+          </button>
+        </div>
 
         <button
           onClick={onManualTranslate}
@@ -88,7 +109,7 @@ export default function App() {
           className={`bg-amber-500 hover:bg-amber-600 font-semibold px-6 py-2 rounded transition disabled:opacity-50 disabled:cursor-not-allowed`}
           aria-disabled={!transcript.trim()}
         >
-          Translate
+          Translate Speech
         </button>
 
         <div
