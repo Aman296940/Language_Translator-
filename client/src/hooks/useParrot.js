@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 
 /* simple ISO-639 list */
@@ -16,25 +16,50 @@ export const LANGS = {
   vi: 'Vietnamese'
 };
 
+// Check if browser supports speech recognition
+const checkBrowserSupport = () => {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  return !!SpeechRecognition;
+};
+
 export default function useParrot() {
   const [status, setStatus] = useState('');
   const [result, setResult] = useState('');
+  const [micError, setMicError] = useState(null);
 
   const {
     transcript,
     listening,
     resetTranscript,
-    // We are deliberately NOT using the 'browserSupportsSpeechRecognition' prop
-    // from useSpeechRecognition directly, as it seems to be misreporting in your environment.
+    browserSupportsSpeechRecognition,
   } = useSpeechRecognition();
 
-  // *** IMPORTANT: FORCE 'supported' TO TRUE ***
-  // Based on your console output, window.webkitSpeechRecognition exists,
-  // so we are overriding the library's internal check to ensure App.jsx proceeds.
-  const supported = true; // <--- This line is the key change
+  // Check browser support
+  const supported = checkBrowserSupport() || browserSupportsSpeechRecognition;
 
-  // *** DEBUGGING LINE: CHECK WHAT useParrot.js IS RETURNING ***
-  console.log('useParrot.js - `supported` value being returned:', supported);
+  // Debug logging and error handling
+  useEffect(() => {
+    console.log('Speech Recognition Support:', {
+      supported,
+      browserSupportsSpeechRecognition,
+      hasWebkit: !!window.webkitSpeechRecognition,
+      hasSpeechRecognition: !!window.SpeechRecognition,
+      listening,
+      transcript
+    });
+
+    // Request microphone permission on component mount
+    if (supported && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(() => {
+          console.log('Microphone permission granted');
+        })
+        .catch((err) => {
+          console.warn('Microphone permission denied or error:', err);
+          setMicError('Microphone access is required for speech recognition. Please allow microphone access and refresh the page.');
+        });
+    }
+  }, [supported, browserSupportsSpeechRecognition, listening, transcript]);
 
 
   const translateAsync = useCallback(
@@ -76,31 +101,55 @@ export default function useParrot() {
     []
   );
 
-  const startListening = (lang) => {
-    // This call still relies on the react-speech-recognition library,
-    // which should ideally pick up window.webkitSpeechRecognition.
-    // If it fails after this, the problem is deeper than the 'supported' flag.
-    SpeechRecognition.startListening({
-      continuous: true,
-      language: lang === 'auto' ? 'en-US' : lang
-    });
-    setStatus('Listening…');
-  };
+  const startListening = useCallback((lang) => {
+    if (!supported) {
+      setMicError('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
+      setStatus('Not Supported');
+      return;
+    }
 
-  const stopListening = () => {
-    SpeechRecognition.stopListening();
-    setStatus('Stopped');
-  };
+    setMicError(null);
+    setStatus('Requesting microphone access...');
+    
+    try {
+      const language = lang === 'auto' ? 'en-US' : lang;
+      console.log('Starting speech recognition with language:', language);
+      
+      SpeechRecognition.startListening({
+        continuous: true,
+        language: language,
+        interimResults: true
+      });
+      
+      setStatus('Listening…');
+    } catch (error) {
+      console.error('Error starting speech recognition:', error);
+      setMicError(error.message || 'Failed to start microphone');
+      setStatus('Error');
+    }
+  }, [supported]);
+
+  const stopListening = useCallback(() => {
+    try {
+      console.log('Stopping speech recognition');
+      SpeechRecognition.stopListening();
+      setStatus('Stopped');
+    } catch (error) {
+      console.error('Error stopping speech recognition:', error);
+      setStatus('Error');
+    }
+  }, []);
 
   return {
     listening,
     transcript,
     finalTranscript: transcript, // Alias for compatibility
     resetTranscript,
-    supported, // <--- Return our explicitly set 'true' value
+    supported,
     translateAsync,
     result,
     status,
+    micError,
     startListening,
     stopListening
   };

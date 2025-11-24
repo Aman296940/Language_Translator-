@@ -12,11 +12,11 @@ export default function App() {
     transcript,
     finalTranscript,
     resetTranscript,
-    supported, // <--- This is the crucial variable we are debugging
-    // browserSupportsSpeechRecognition, // Removed, as we're focusing on 'supported'
+    supported,
     translateAsync,
     result,
     status,
+    micError,
     startListening,
     stopListening,
   } = useParrot();
@@ -73,12 +73,22 @@ export default function App() {
 
       <div className="flex flex-col items-center gap-6">
         <MicButton listening={listening} onClick={onToggle} aria-label="Start or stop microphone" />
+        
+        {micError && (
+          <div className="w-full bg-red-900/50 border border-red-500 rounded p-3 text-red-200 text-sm">
+            <strong>Microphone Error:</strong> {micError}
+            <br />
+            <span className="text-xs mt-1 block">
+              Make sure you've granted microphone permissions and are using Chrome or Edge browser.
+            </span>
+          </div>
+        )}
 
         <textarea
           className="w-full h-32 p-3 rounded text-black"
           value={transcript}
           readOnly
-          placeholder="Your speech will appear here... Or type text below to translate manually."
+          placeholder={listening ? "Speak now... Your speech will appear here." : "Your speech will appear here... Or type text below to translate manually."}
           aria-label="Transcript text area"
         />
 
