@@ -3,7 +3,6 @@ import LanguageSelect from './components/LanguageSelect.jsx';
 import MicButton from './components/MicButton.jsx';
 import StatusBar from './components/StatusBar.jsx';
 import useParrot from './hooks/useParrot.js';
-import logo from './assets/react.svg';
 
 export default function App() {
   const {
@@ -16,6 +15,8 @@ export default function App() {
     result,
     status,
     micError,
+    history,
+    clearHistory,
     startListening,
     stopListening,
   } = useParrot();
@@ -28,8 +29,7 @@ export default function App() {
       <div className="w-full max-w-3xl px-6 pb-20">
         <p className="text-red-600 text-center mt-8">
           Your browser does not support speech recognition.<br />
-          Please use Chrome or Edge browsers.<br/>
-          **DEBUG INFO: `supported` value is: {String(supported)}** {/* Display the value directly */}
+          Please use Chrome or Edge browsers.
         </p>
       </div>
     );
@@ -116,6 +116,28 @@ export default function App() {
         >
           {result || 'Translation output will appear here.'}
         </div>
+
+        {history.length > 0 && (
+          <div className="w-full mt-6">
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm text-gray-300">Translation History</label>
+              <button
+                onClick={clearHistory}
+                className="text-xs text-amber-400 hover:text-amber-300 underline"
+              >
+                Clear History
+              </button>
+            </div>
+            <div className="bg-slate-800/30 rounded p-3 max-h-48 overflow-y-auto">
+              {history.slice(0, 5).map((item) => (
+                <div key={item.id} className="mb-2 pb-2 border-b border-slate-700 last:border-0">
+                  <div className="text-xs text-gray-400">{item.original}</div>
+                  <div className="text-sm text-gray-200 mt-1">{item.translated}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <StatusBar status={status} reset={resetTranscript} />

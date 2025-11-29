@@ -8,10 +8,11 @@ A modern web application for translating text between multiple languages with re
 
 ## Features
 
-- **Real-time Translation**: Translate text between 10+ languages instantly
-- **Voice Input**: Use your microphone to speak and get instant transcription
-- **Text Input**: Manual text input option for typing translations
-- **Speech Output**: Hear translations spoken back to you
+- **Real-time Translation**: Translate text between 15+ languages instantly
+- **Dual Input Modes**: Voice input (speech-to-text) and manual text input
+- **Text-to-Speech**: Hear translations spoken back to you
+- **Translation History**: View and manage your translation history
+- **Offline Support**: Service worker for basic offline functionality
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
 - **Modern UI**: Clean interface built with Tailwind CSS
 

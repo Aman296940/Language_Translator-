@@ -1,0 +1,20 @@
+[33me447a08[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Clean up code: Remove debug logs and improve code quality
+[33mee02b0e[m Critical fix: Set localListening before starting recognition to prevent immediate end
+[33m4bc1883[m Fix recognition initialization: Remove dependency loop and improve restart logic
+[33m8c2166b[m Add extensive debugging for speech recognition transcription issue
+[33m6888ebe[m Fix transcription: Improve native recognition transcript accumulation and make it primary method
+[33ma323f85[m Fix transcription and clear button: Add native Web Speech API fallback and improve clear functionality
+[33m363d6a1[m Fix speech recognition: Add proper error handling, microphone permission requests, and better debugging
+[33mffe7426[m Improve error handling and add manual text input for testing translations
+[33m2bb37b5[m Fix build: Use --production flag to skip devDependencies during Vercel build
+[33ma69a8fd[m Fix concurrently version - use 7.6.2 instead of non-existent 8.3.0
+[33mca06171[m Merge remote changes and resolve conflicts - Vercel deployment ready
+[33m002a3e3[m Configure for Vercel deployment: Add serverless functions, update configs, fix routing
+[33mc8b094c[m Update README.md
+[33mada6c37[m Update server.js
+[33mfb8ed8a[m Update server.js
+[33m7e4b475[m Create vercel.json
+[33md680ed7[m Update package.json
+[33mae2e361[m Delete vercel.json
+[33m0d85c32[m Update vite.config.js
+[33m6c0eca5[m Update package.json

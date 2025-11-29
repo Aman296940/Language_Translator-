@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 
-/* simple ISO-639 list */
 export const LANGS = {
   auto: 'Auto',
   en: 'English',
@@ -13,7 +12,15 @@ export const LANGS = {
   ko: 'Korean',
   zh: 'Chinese',
   ru: 'Russian',
-  vi: 'Vietnamese'
+  vi: 'Vietnamese',
+  it: 'Italian',
+  pt: 'Portuguese',
+  ar: 'Arabic',
+  tr: 'Turkish',
+  pl: 'Polish',
+  nl: 'Dutch',
+  th: 'Thai',
+  id: 'Indonesian'
 };
 
 // Check if browser supports speech recognition
@@ -29,6 +36,7 @@ export default function useParrot() {
   const [localTranscript, setLocalTranscript] = useState('');
   const [localListening, setLocalListening] = useState(false);
   const [recognition, setRecognition] = useState(null);
+  const [history, setHistory] = useState([]);
 
   const {
     transcript: libTranscript,
@@ -45,6 +53,18 @@ export default function useParrot() {
 
   // Check browser support
   const supported = checkBrowserSupport() || browserSupportsSpeechRecognition;
+
+  // Load history from localStorage
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('translationHistory');
+    if (savedHistory) {
+      try {
+        setHistory(JSON.parse(savedHistory));
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+  }, []);
 
 
   // Initialize native Speech Recognition - only once
@@ -168,6 +188,21 @@ export default function useParrot() {
         
         if (res.result) {
           setResult(res.result);
+          
+          // Save to history
+          const historyItem = {
+            id: Date.now(),
+            original: text,
+            translated: res.result,
+            from: from,
+            to: to,
+            timestamp: new Date().toISOString()
+          };
+          const newHistory = [historyItem, ...history.slice(0, 49)]; // Keep last 50
+          setHistory(newHistory);
+          localStorage.setItem('translationHistory', JSON.stringify(newHistory));
+          
+          // Text-to-speech
           const utter = new SpeechSynthesisUtterance(res.result);
           utter.lang = to;
           window.speechSynthesis.speak(utter);
@@ -268,16 +303,23 @@ export default function useParrot() {
     setMicError(null);
   }, [resetTranscript]);
 
+  const clearHistory = useCallback(() => {
+    setHistory([]);
+    localStorage.removeItem('translationHistory');
+  }, []);
+
   return {
     listening,
     transcript,
-    finalTranscript: transcript, // Alias for compatibility
-    resetTranscript: clearAll, // Use enhanced clear function
+    finalTranscript: transcript,
+    resetTranscript: clearAll,
     supported,
     translateAsync,
     result,
     status,
     micError,
+    history,
+    clearHistory,
     startListening,
     stopListening
   };
