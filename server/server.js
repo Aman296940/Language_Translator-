@@ -12,33 +12,19 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
 app.use('/api/translate', translateRouter);
 
-// --- IMPORTANT MODIFICATION STARTS HERE ---
-
-// In a serverless environment like Vercel, your app is not 'listened' to directly.
-// Instead, you export the app instance, and the serverless platform handles the incoming requests.
-// This line replaces the need for `app.listen()` in production.
 export default app;
 
-// The following block is for local development only.
-// Vercel sets `process.env.NODE_ENV` to 'production' during deployment,
-// so this `app.listen` will not run on Vercel.
 if (process.env.NODE_ENV !== 'production') {
-    // These imports and static serving are only relevant if you're serving
-    // the frontend from the *same* Express server locally.
-    // In a Vercel monorepo setup, Vercel serves the frontend separately.
-
 
     const __dirname = dirname(fileURLToPath(import.meta.url));
     const buildPath = path.join(__dirname, '../client/dist');
 
-    // Serve React build locally if not in production
     app.use(express.static(buildPath));
     app.get('*', (_, res) => res.sendFile(path.join(buildPath, 'index.html')));
 
@@ -46,4 +32,3 @@ if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => console.log(`API running on :${PORT}`));
 }
 
-// --- IMPORTANT MODIFICATION ENDS HERE ---
