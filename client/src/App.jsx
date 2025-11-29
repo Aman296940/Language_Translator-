@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import LanguageSelect from './components/LanguageSelect.jsx';
 import MicButton from './components/MicButton.jsx';
 import StatusBar from './components/StatusBar.jsx';
@@ -23,6 +23,20 @@ export default function App() {
 
   const [fromLang, setFromLang] = useState('auto');
   const [toLang, setToLang] = useState('en');
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   if (!supported) {
     return (
@@ -51,6 +65,11 @@ export default function App() {
     <div className="w-full max-w-3xl px-6 pb-20 mx-auto">
       <header className="flex flex-col items-center gap-4 mb-8">
         <h1 className="text-3xl font-bold text-gray-100">Language Translator</h1>
+        {!isOnline && (
+          <div className="bg-amber-900/50 border border-amber-500 rounded p-2 text-amber-200 text-sm">
+            ⚠️ You're offline. App interface is available, but translation requires internet.
+          </div>
+        )}
       </header>
 
       <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
